@@ -1,0 +1,308 @@
+// ========================================
+// FitSwap - Million-Scale Database Schema
+// ========================================
+// 설계 원칙:
+// 1. 인덱스 최적화 (쿼리 성능)
+// 2. 정규화 (데이터 중복 제거)
+// 3. 확장 가능 (파티셔닝 준비)
+// ========================================
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["fullTextSearch", "fullTextIndex"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ========================================
+// User & Authentication
+// ========================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  clerkId   String   @unique
+
+  // Profile
+  name      String?
+  avatar    String?
+
+  // Subscription
+  plan      Plan     @default(FREE)
+
+  // Stripe
+  stripeCustomerId       String?   @unique
+  stripeSubscriptionId   String?   @unique
+  stripePriceId          String?
+  stripeCurrentPeriodEnd DateTime?
+
+  // Usage Limits
+  searchesThisMonth      Int       @default(0)
+  lastResetAt            DateTime  @default(now())
+
+  // Relations
+  searches  FoodSearch[]
+  favorites FavoriteFoodSwap[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([clerkId])
+  @@index([stripeCustomerId])
+  @@map("users")
+}
+
+enum Plan {
+  FREE       // 10 searches/month
+  PREMIUM    // Unlimited
+}
+
+// ========================================
+// Food Database (USDA + Custom)
+// ========================================
+
+model Food {
+  id              String   @id @default(cuid())
+
+  // Basic Info
+  name            String
+  brand           String?
+  description     String?
+
+  // Nutrition (per 100g)
+  servingSize     Float    @default(100) // grams
+  calories        Int
+  protein         Float
+  carbs           Float
+  fat             Float
+  fiber           Float    @default(0)
+  sugar           Float    @default(0)
+  sodium          Float    @default(0) // mg
+
+  // Health Metrics
+  healthScore     Int      // 0-100 (알고리즘 계산)
+
+  // Categorization
+  category        FoodCategory
+  tags            String[] // ["fast-food", "burger", "beef"]
+
+  // External IDs
+  usdaFdcId       String?  @unique // USDA FoodData Central ID
+  nutritionixId   String?  @unique
+
+  // Images
+  imageUrl        String?
+  thumbnailUrl    String?
+
+  // Metadata
+  isVerified      Boolean  @default(false)
+  popularity      Int      @default(0) // 검색 빈도
+
+  // Relations
+  originalSearches      FoodSearch[] @relation("OriginalFood")
+  alternativeSearches   FoodSearch[] @relation("AlternativeFood")
+  swapsAsOriginal       FoodSwap[]   @relation("OriginalFoodSwap")
+  swapsAsAlternative    FoodSwap[]   @relation("AlternativeFoodSwap")
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Indexes (쿼리 최적화)
+  @@index([name])
+  @@index([category])
+  @@index([healthScore])
+  @@index([usdaFdcId])
+  @@index([popularity])
+  @@fulltext([name, brand, description])
+  @@map("foods")
+}
+
+enum FoodCategory {
+  BURGER
+  PIZZA
+  SANDWICH
+  SALAD
+  PASTA
+  RICE
+  CHICKEN
+  BEEF
+  SEAFOOD
+  VEGETARIAN
+  VEGAN
+  DESSERT
+  SNACK
+  BEVERAGE
+  BREAKFAST
+  OTHER
+}
+
+// ========================================
+// Food Search History
+// ========================================
+
+model FoodSearch {
+  id              String   @id @default(cuid())
+
+  // User
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Original Food (uploaded)
+  originalFoodId  String?
+  originalFood    Food?    @relation("OriginalFood", fields: [originalFoodId], references: [id])
+
+  // If custom input (not in DB)
+  customFoodName  String?
+  uploadedImageUrl String?
+
+  // AI Recognition Result
+  recognizedName  String
+  confidence      Float    // 0.0 - 1.0
+
+  // Selected Alternative
+  selectedAltId   String?
+  selectedAlt     Food?    @relation("AlternativeFood", fields: [selectedAltId], references: [id])
+
+  // Analytics
+  responseTimeMs  Int      // 분석 소요 시간 (ms)
+  cacheHit        Boolean  @default(false)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([recognizedName])
+  @@map("food_searches")
+}
+
+// ========================================
+// Food Swap Recommendations (캐싱용)
+// ========================================
+
+model FoodSwap {
+  id              String   @id @default(cuid())
+
+  // Original → Alternative
+  originalFoodId  String
+  originalFood    Food     @relation("OriginalFoodSwap", fields: [originalFoodId], references: [id], onDelete: Cascade)
+
+  alternativeFoodId String
+  alternativeFood   Food   @relation("AlternativeFoodSwap", fields: [alternativeFoodId], references: [id], onDelete: Cascade)
+
+  // Comparison
+  caloriesSaved   Int      // Original - Alternative
+  fatSaved        Float
+  sugarSaved      Float
+
+  // Recommendation Score (알고리즘)
+  score           Int      // 0-100
+  reason          String   // "32% fewer calories, same satisfaction"
+
+  // Analytics
+  clickCount      Int      @default(0)
+  conversionCount Int      @default(0) // 사용자가 선택한 횟수
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([originalFoodId, alternativeFoodId])
+  @@index([originalFoodId])
+  @@index([alternativeFoodId])
+  @@index([score])
+  @@map("food_swaps")
+}
+
+// ========================================
+// User Favorites
+// ========================================
+
+model FavoriteFoodSwap {
+  id              String   @id @default(cuid())
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  originalName    String
+  alternativeName String
+  caloriesSaved   Int
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+
+  @@unique([userId, originalName, alternativeName])
+  @@index([userId])
+  @@map("favorite_swaps")
+}
+
+// ========================================
+// Cache Layer (Redis 백업용)
+// ========================================
+
+model CachedResponse {
+  id              String   @id @default(cuid())
+
+  // Cache Key
+  cacheKey        String   @unique
+
+  // Response Data (JSON)
+  data            Json
+
+  // Metadata
+  hitCount        Int      @default(0)
+
+  // Expiration
+  expiresAt       DateTime
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([cacheKey])
+  @@index([expiresAt])
+  @@map("cached_responses")
+}
+
+// ========================================
+// Analytics & Monitoring
+// ========================================
+
+model Analytics {
+  id              String   @id @default(cuid())
+
+  // Event Type
+  eventType       EventType
+
+  // User Info (nullable for anonymous)
+  userId          String?
+
+  // Event Data (JSON)
+  data            Json
+
+  // Performance
+  responseTimeMs  Int?
+
+  // Timestamp
+  timestamp       DateTime @default(now())
+
+  @@index([eventType, timestamp])
+  @@index([userId, timestamp])
+  @@map("analytics")
+}
+
+enum EventType {
+  FOOD_UPLOAD
+  FOOD_RECOGNIZED
+  ALTERNATIVE_VIEWED
+  ALTERNATIVE_CLICKED
+  SUBSCRIPTION_STARTED
+  SUBSCRIPTION_CANCELLED
+  ERROR_OCCURRED
+}
