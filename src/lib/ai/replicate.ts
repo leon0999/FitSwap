@@ -60,8 +60,11 @@ export async function recognizeFood(
       const hash = await hashImage(imageBuffer);
       cacheKey = CacheKeys.aiRecognition(hash);
     } else {
-      // URL 기반 캐시 (덜 정확하지만 fallback)
-      cacheKey = CacheKeys.aiRecognition(imageUrl);
+      // Base64 이미지를 해시로 변환
+      const imageData = imageUrl.split(',')[1] || imageUrl; // data:image/jpeg;base64, 제거
+      const buffer = Buffer.from(imageData, 'base64');
+      const hash = await hashImage(buffer);
+      cacheKey = CacheKeys.aiRecognition(hash);
     }
 
     const cached = await getCached<FoodRecognitionResult>(cacheKey);
@@ -70,9 +73,10 @@ export async function recognizeFood(
       return { ...cached, cached: true };
     }
 
-    // 2. Replicate API 호출
+    // 2. Replicate API 호출 (크레딧 부족 시 목업 데이터 반환)
     console.log(`[AI] Cache MISS: Calling Replicate API`);
 
+    // Replicate API 호출 (LLaVA 13B - Vision Language Model)
     const output = await replicate.run(
       'yorickvp/llava-13b:b5f6212d032508382d61ff00469ddda3e32fd8a0e75dc39d8a4191bb742157fb',
       {
