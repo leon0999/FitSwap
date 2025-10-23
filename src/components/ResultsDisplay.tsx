@@ -33,58 +33,82 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
       </button>
 
       {/* Original Food Card */}
-      <div className="bg-white rounded-2xl shadow-lg p-8 mb-12">
-        <h2 className="text-2xl font-bold mb-6">Your Food</h2>
-
-        <div className="grid md:grid-cols-2 gap-8">
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 mb-12">
+        <div className="grid md:grid-cols-2 gap-12">
           {/* 이미지 */}
           <div>
             <img
               src={image}
               alt={recognition.foodName}
-              className="w-full h-64 object-cover rounded-xl shadow-md"
+              className="w-full h-72 object-cover rounded-lg"
             />
             <div className="mt-4 flex items-center gap-2">
-              <div className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-sm font-semibold">
+              <div className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm font-medium">
                 {recognition.category}
               </div>
-              <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold">
-                {Math.round(recognition.confidence * 100)}% Confidence
+              <div className="px-3 py-1 bg-green-50 text-green-700 rounded-md text-sm font-medium">
+                {Math.round(recognition.confidence * 100)}% confident
               </div>
             </div>
           </div>
 
           {/* 영양 정보 */}
           <div>
-            <h3 className="text-xl font-bold mb-4">{recognition.foodName}</h3>
+            {/* 음식 이름 - 크게! */}
+            <h3 className="text-3xl font-bold mb-2 text-gray-900">{recognition.foodName || original?.name}</h3>
             {recognition.brand && (
-              <p className="text-gray-600 mb-4">{recognition.brand}</p>
+              <p className="text-lg text-gray-600 mb-6">{recognition.brand}</p>
             )}
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-red-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Calories</p>
-                <p className="text-3xl font-bold text-red-600">{original?.calories || nutrition?.calories || 'N/A'}</p>
+            {/* Tier 1: 다이어트 핵심 영양소 (크게) */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-1">Calories</p>
+                <p className="text-4xl font-bold text-gray-900">{original?.calories || nutrition?.calories || 'N/A'}</p>
               </div>
 
-              <div className="bg-orange-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Health Score</p>
-                <p className="text-3xl font-bold text-orange-600">
-                  {original?.healthScore || nutrition?.healthScore || 'N/A'}/100
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-1">Protein</p>
+                <p className="text-4xl font-bold text-gray-900">
+                  {original?.protein || nutrition?.protein || 'N/A'}<span className="text-2xl text-gray-500">g</span>
                 </p>
               </div>
 
-              <div className="bg-purple-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Protein</p>
-                <p className="text-2xl font-bold text-purple-600">
-                  {original?.protein || nutrition?.protein || 'N/A'}g
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-1">Carbs</p>
+                <p className="text-4xl font-bold text-gray-900">
+                  {original?.carbs || nutrition?.carbs || 'N/A'}<span className="text-2xl text-gray-500">g</span>
                 </p>
               </div>
 
-              <div className="bg-blue-50 rounded-lg p-4">
-                <p className="text-sm text-gray-600">Fat</p>
-                <p className="text-2xl font-bold text-blue-600">
-                  {original?.fat || nutrition?.fat || 'N/A'}g
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                <p className="text-sm font-medium text-gray-600 mb-1">Fat</p>
+                <p className="text-4xl font-bold text-gray-900">
+                  {original?.fat || nutrition?.fat || 'N/A'}<span className="text-2xl text-gray-500">g</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Tier 2: 중요 영양소 (중간 크기) */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-3 bg-white border border-gray-200 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Sugar</p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {original?.sugar || nutrition?.sugar || 'N/A'}<span className="text-sm text-gray-500">g</span>
+                </p>
+              </div>
+
+              <div className="text-center p-3 bg-white border border-gray-200 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Fiber</p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {original?.fiber || nutrition?.fiber || 'N/A'}<span className="text-sm text-gray-500">g</span>
+                </p>
+              </div>
+
+              <div className="text-center p-3 bg-white border border-gray-200 rounded-lg">
+                <p className="text-xs text-gray-500 mb-1">Sodium</p>
+                <p className="text-xl font-semibold text-gray-900">
+                  {original?.sodium || nutrition?.sodium || 'N/A'}<span className="text-sm text-gray-500">mg</span>
                 </p>
               </div>
             </div>
@@ -94,8 +118,8 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
 
       {/* Alternatives */}
       <div>
-        <h2 className="text-3xl font-bold mb-8 text-center">
-          🌟 Healthier Alternatives
+        <h2 className="text-3xl font-bold mb-8 text-gray-900">
+          Healthier Alternatives
         </h2>
 
         {alternatives && alternatives.length > 0 ? (
@@ -103,70 +127,54 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
             {alternatives.map((alt, idx) => (
               <div
                 key={idx}
-                className="bg-white rounded-2xl shadow-lg p-6 hover:shadow-xl transition-shadow border-2 border-transparent hover:border-green-500"
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-green-500 transition-all"
               >
                 {/* 절감 배지 */}
-                <div className="flex items-center gap-2 mb-4">
-                  <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <div className="inline-flex items-center gap-1 px-3 py-1 bg-green-50 text-green-700 rounded-md text-sm font-medium mb-4">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                   </svg>
-                  <span className="text-sm text-green-600 font-semibold">
-                    {alt.caloriesSavedPercent}% fewer calories
-                  </span>
+                  {alt.caloriesSavedPercent}% fewer calories
                 </div>
 
-                {/* 음식 정보 */}
-                <h3 className="text-lg font-bold mb-2">{alt.name}</h3>
+                {/* 음식 이름 - 크게! */}
+                <h3 className="text-2xl font-bold mb-2 text-gray-900">{alt.name}</h3>
                 {alt.brand && (
                   <p className="text-gray-600 text-sm mb-4">{alt.brand}</p>
                 )}
 
-                {/* 영양 정보 */}
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Calories</span>
-                    <span className="text-sm font-bold">{alt.calories}</span>
+                {/* 핵심 영양소 */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Calories</p>
+                    <p className="text-2xl font-bold text-gray-900">{alt.calories}</p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Health Score</span>
-                    <span className="text-sm font-bold text-green-600">
-                      {alt.healthScore}/100
-                    </span>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Protein</p>
+                    <p className="text-2xl font-bold text-gray-900">{alt.protein}<span className="text-sm text-gray-500">g</span></p>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-sm text-gray-600">Protein</span>
-                    <span className="text-sm font-bold">{alt.protein}g</span>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Carbs</p>
+                    <p className="text-2xl font-bold text-gray-900">{alt.carbs}<span className="text-sm text-gray-500">g</span></p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                    <p className="text-xs text-gray-500 mb-1">Fat</p>
+                    <p className="text-2xl font-bold text-gray-900">{alt.fat}<span className="text-sm text-gray-500">g</span></p>
                   </div>
                 </div>
 
                 {/* 추천 이유 */}
-                <div className="bg-green-50 rounded-lg p-3 mb-4">
-                  <p className="text-sm text-green-800">{alt.reason}</p>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <p className="text-sm text-green-800 font-medium">{alt.reason}</p>
                 </div>
-
-                {/* CTA */}
-                <button className="w-full py-3 bg-gradient-to-r from-green-500 to-blue-500 text-white rounded-lg font-semibold hover:shadow-lg transition-all">
-                  Find Near Me
-                </button>
               </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12 bg-white rounded-2xl shadow-lg">
-            <p className="text-gray-600">No alternatives found. Try another food!</p>
+          <div className="text-center py-12 bg-white rounded-xl border border-gray-200">
+            <p className="text-gray-600">No healthier alternatives found for this food.</p>
           </div>
         )}
-      </div>
-
-      {/* Premium CTA */}
-      <div className="mt-16 bg-gradient-to-r from-green-500 to-blue-500 rounded-2xl p-12 text-white text-center">
-        <h3 className="text-3xl font-bold mb-4">Ready to eat healthier?</h3>
-        <p className="text-xl mb-8 opacity-90">
-          Get unlimited swaps, personalized meal plans, and more!
-        </p>
-        <button className="px-8 py-4 bg-white text-green-600 rounded-full text-lg font-semibold hover:bg-gray-100 transition-colors shadow-xl">
-          Start Free Trial - $9.99/month
-        </button>
       </div>
     </div>
   );
