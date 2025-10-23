@@ -18,6 +18,7 @@ export const CacheKeys = {
   userSearches: (userId: string) => `user:${userId}:searches`,
   usdaFood: (query: string) => `usda:${query.toLowerCase()}`,
   aiRecognition: (imageHash: string) => `ai:recognition:${imageHash}`,
+  places: (location: string, keyword: string) => `places:${location}:${keyword.toLowerCase()}`,
 } as const;
 
 /**

@@ -11,6 +11,7 @@
 import { NutritionData, searchFood, searchMultipleFoods } from '@/lib/nutrition/usda';
 import { calculateCaloriesSavedPercent } from '@/lib/utils';
 import { FoodCategory } from '@/lib/ai/replicate';
+import { calculateCompositeNutrition, isCompositeFoodCandidate } from '@/lib/nutrition/composite-foods';
 
 export interface FoodAlternative {
   // 음식 정보
@@ -47,19 +48,43 @@ export interface RecommendationResult {
  */
 export async function recommendAlternatives(
   foodName: string,
-  category?: FoodCategory
+  category?: FoodCategory,
+  options?: {
+    ingredients?: string[];
+    servingSize?: string;
+    isHomemade?: boolean;
+  }
 ): Promise<RecommendationResult> {
   const startTime = Date.now();
 
   try {
-    // 1. 원본 음식 영양 정보
-    const originalResults = await searchFood(foodName);
+    let original: NutritionData;
 
-    if (originalResults.length === 0) {
-      throw new Error(`Food not found: ${foodName}`);
+    // 1. 복합 음식 여부 체크
+    const isComposite = isCompositeFoodCandidate(
+      foodName,
+      options?.isHomemade,
+      options?.ingredients
+    );
+
+    if (isComposite && options?.ingredients && options.ingredients.length > 0) {
+      // 복합 음식 처리 (NEW!)
+      console.log(`[Recommendations] Composite food detected: ${foodName}`);
+      original = await calculateCompositeNutrition(
+        options.ingredients,
+        options.servingSize
+      );
+    } else {
+      // 브랜드 음식 처리 (기존 로직)
+      const originalResults = await searchFood(foodName);
+
+      if (originalResults.length === 0) {
+        throw new Error(`Food not found: ${foodName}`);
+      }
+
+      // 가장 정확한 매칭 선택 (브랜드 우선, 칼로리 검증)
+      original = selectBestMatch(originalResults, foodName);
     }
-
-    const original = originalResults[0];
 
     // 2. 카테고리별 검색어 생성
     const searchQueries = generateSearchQueries(foodName, category);
@@ -247,6 +272,76 @@ function generateReason(params: {
   // 첫 글자 대문자
   const result = reasons.join(', ');
   return result.charAt(0).toUpperCase() + result.slice(1);
+}
+
+/**
+ * 가장 정확한 매칭 선택 (브랜드 우선, 칼로리 검증)
+ *
+ * 알고리즘:
+ * 1. 브랜드 음식 우선 (McDonald's, Burger King 등)
+ * 2. 칼로리 범위 검증 (너무 낮거나 높은 값 제외)
+ * 3. 설명 정확도 (정확한 매칭 우선)
+ * 4. 데이터 타입 우선 (Branded > Survey)
+ */
+function selectBestMatch(results: NutritionData[], foodName: string): NutritionData {
+  if (results.length === 1) return results[0];
+
+  const nameLower = foodName.toLowerCase();
+
+  // 점수 기반 선택
+  const scored = results.map((item) => {
+    let score = 0;
+
+    // 1. 브랜드 있는 음식 우선 (+30점)
+    if (item.brand) {
+      score += 30;
+
+      // 유명 브랜드 추가 점수 (+20점)
+      const famousBrands = ['mcdonald', 'burger king', 'subway', 'wendy', 'taco bell', 'kfc'];
+      if (famousBrands.some((brand) => item.brand?.toLowerCase().includes(brand))) {
+        score += 20;
+      }
+    }
+
+    // 2. 설명 정확도 (정확한 매칭 +40점, 부분 매칭 +20점)
+    const itemNameLower = item.name.toLowerCase();
+    if (itemNameLower === nameLower) {
+      score += 40;
+    } else if (itemNameLower.includes(nameLower) || nameLower.includes(itemNameLower)) {
+      score += 20;
+    }
+
+    // 3. 데이터 타입 우선 (Branded +15점)
+    if (item.dataType === 'Branded') {
+      score += 15;
+    } else if (item.dataType === 'Survey (FNDDS)') {
+      score += 10;
+    }
+
+    // 4. 칼로리 범위 검증
+    // 너무 낮은 칼로리 (< 50 kcal) 또는 너무 높은 칼로리 (> 1500 kcal) 제외
+    if (item.calories < 50) {
+      score -= 50; // 샐러드, 소스 등 제외
+    } else if (item.calories > 1500) {
+      score -= 30; // 너무 과도한 칼로리
+    }
+
+    // 5. 건강 점수 (적당한 범위 선호)
+    if (item.healthScore > 0 && item.healthScore <= 100) {
+      score += Math.floor(item.healthScore / 10);
+    }
+
+    return { item, score };
+  });
+
+  // 점수 높은 순 정렬
+  scored.sort((a, b) => b.score - a.score);
+
+  console.log(
+    `[Matching] "${foodName}" → Selected: "${scored[0].item.name}" (${scored[0].item.brand || 'no brand'}) with score ${scored[0].score}`
+  );
+
+  return scored[0].item;
 }
 
 /**

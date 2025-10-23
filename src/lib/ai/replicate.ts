@@ -24,6 +24,11 @@ export interface FoodRecognitionResult {
   category: FoodCategory;
   confidence: number;
   cached: boolean;
+
+  // 복합 음식 분해 (v2)
+  ingredients?: string[]; // 재료 리스트 (집밥용)
+  servingSize?: string; // 예상 서빙 ("1 plate", "200g")
+  isHomemade?: boolean; // 집밥 여부
 }
 
 export type FoodCategory =
@@ -85,13 +90,25 @@ export async function recognizeFood(
           prompt: `Analyze this food image and return ONLY a JSON object with this exact structure (no markdown, no backticks, just raw JSON):
 
 {
-  "foodName": "specific food name (e.g., Big Mac, not just burger)",
+  "foodName": "specific food name (e.g., Big Mac, Spaghetti Marinara)",
   "brand": "brand name if visible (McDonald's, Subway, etc.) or null",
   "category": "one of: BURGER, PIZZA, SANDWICH, SALAD, PASTA, RICE, CHICKEN, BEEF, SEAFOOD, VEGETARIAN, VEGAN, DESSERT, SNACK, BEVERAGE, BREAKFAST, OTHER",
-  "confidence": 0.95
+  "confidence": 0.95,
+  "ingredients": ["main ingredient", "sauce/topping", "garnish"],
+  "servingSize": "estimated serving (e.g., 1 plate, 200g, 1 burger)",
+  "isHomemade": true or false
 }
 
-Be specific. If you can identify the exact dish, use that name.`,
+IMPORTANT INSTRUCTIONS:
+1. For BRANDED food (McDonald's, KFC, etc.): Set brand name, isHomemade=false
+2. For HOMEMADE/RESTAURANT food: List all visible ingredients, estimate serving size, isHomemade=true
+3. Be specific about ingredients (e.g., "spaghetti pasta", "tomato sauce", "fresh basil", "parmesan cheese")
+4. Estimate realistic serving size based on plate/portion visible
+5. For complex dishes, list ALL major components (proteins, carbs, vegetables, sauces)
+
+Examples:
+- Big Mac: {"foodName": "Big Mac", "brand": "McDonald's", "isHomemade": false}
+- Homemade pasta: {"foodName": "Spaghetti Marinara", "brand": null, "ingredients": ["spaghetti pasta", "tomato sauce", "basil", "olive oil"], "servingSize": "1 plate (250g)", "isHomemade": true}`,
           max_tokens: 300,
         },
       }

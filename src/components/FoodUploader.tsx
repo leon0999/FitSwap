@@ -102,6 +102,9 @@ export function FoodUploader({
         body: JSON.stringify({
           foodName: recognitionData.foodName,
           category: recognitionData.category,
+          ingredients: recognitionData.ingredients, // NEW!
+          servingSize: recognitionData.servingSize, // NEW!
+          isHomemade: recognitionData.isHomemade, // NEW!
         }),
       });
 

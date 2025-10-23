@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   try {
     // 1. 요청 파싱
     const body = await req.json();
-    const { foodName, category } = body;
+    const { foodName, category, ingredients, servingSize, isHomemade } = body;
 
     if (!foodName) {
       return NextResponse.json(
@@ -50,7 +50,12 @@ export async function POST(req: NextRequest) {
     // 2. 대체품 추천
     const result = await recommendAlternatives(
       foodName,
-      category as FoodCategory | undefined
+      category as FoodCategory | undefined,
+      {
+        ingredients,
+        servingSize,
+        isHomemade,
+      }
     );
 
     // 3. 응답
