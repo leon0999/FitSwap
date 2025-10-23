@@ -72,6 +72,7 @@ export async function recognizeFood(
       cacheKey = CacheKeys.aiRecognition(hash);
     }
 
+    // 캐시 확인 (7일)
     const cached = await getCached<FoodRecognitionResult>(cacheKey);
     if (cached) {
       console.log(`[AI] Cache HIT: ${cacheKey} (${Date.now() - startTime}ms)`);

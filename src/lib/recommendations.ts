@@ -11,7 +11,12 @@
 import { NutritionData, searchFood, searchMultipleFoods } from '@/lib/nutrition/usda';
 import { calculateCaloriesSavedPercent } from '@/lib/utils';
 import { FoodCategory } from '@/lib/ai/replicate';
-import { calculateCompositeNutrition, isCompositeFoodCandidate } from '@/lib/nutrition/composite-foods';
+import {
+  calculateCompositeNutrition,
+  isCompositeFoodCandidate,
+  estimateIngredientsFromName,
+  isRestaurantOrHomemade,
+} from '@/lib/nutrition/composite-foods';
 
 export interface FoodAlternative {
   // 음식 정보
@@ -60,29 +65,52 @@ export async function recommendAlternatives(
   try {
     let original: NutritionData;
 
-    // 1. 복합 음식 여부 체크
-    const isComposite = isCompositeFoodCandidate(
-      foodName,
-      options?.isHomemade,
-      options?.ingredients
-    );
+    // ===== 새로운 로직: 레스토랑/집밥 우선 감지 =====
+    const isRestaurant = isRestaurantOrHomemade(foodName);
 
-    if (isComposite && options?.ingredients && options.ingredients.length > 0) {
-      // 복합 음식 처리 (NEW!)
-      console.log(`[Recommendations] Composite food detected: ${foodName}`);
-      original = await calculateCompositeNutrition(
-        options.ingredients,
-        options.servingSize
-      );
+    if (isRestaurant) {
+      // 레스토랑/집밥 음식 → 무조건 복합 음식으로 처리
+      console.log(`[Recommendations] Restaurant/Homemade food detected: ${foodName}`);
+
+      let ingredients = options?.ingredients;
+
+      // AI가 ingredients를 제공하지 않았으면 자동 추정
+      if (!ingredients || ingredients.length === 0) {
+        ingredients = estimateIngredientsFromName(foodName) || undefined;
+
+        if (ingredients) {
+          console.log(`[Recommendations] Auto-estimated ingredients: ${ingredients.join(', ')}`);
+        }
+      }
+
+      // 복합 음식 계산
+      if (ingredients && ingredients.length > 0) {
+        original = await calculateCompositeNutrition(
+          ingredients,
+          options?.servingSize
+        );
+      } else {
+        // 재료 추정도 실패 → USDA 일반 재료로 검색 (냉동식품 제외)
+        console.log(`[Recommendations] Ingredient estimation failed, using generic search`);
+        const originalResults = await searchFood(foodName);
+
+        if (originalResults.length === 0) {
+          throw new Error(`Food not found: ${foodName}`);
+        }
+
+        // 냉동식품 제외하고 선택
+        original = selectBestMatch(originalResults, foodName, { excludeFrozen: true });
+      }
     } else {
-      // 브랜드 음식 처리 (기존 로직)
+      // 브랜드 음식 → USDA 직접 검색
+      console.log(`[Recommendations] Brand food detected: ${foodName}`);
       const originalResults = await searchFood(foodName);
 
       if (originalResults.length === 0) {
         throw new Error(`Food not found: ${foodName}`);
       }
 
-      // 가장 정확한 매칭 선택 (브랜드 우선, 칼로리 검증)
+      // 브랜드 우선 매칭
       original = selectBestMatch(originalResults, foodName);
     }
 
@@ -283,21 +311,48 @@ function generateReason(params: {
  * 3. 설명 정확도 (정확한 매칭 우선)
  * 4. 데이터 타입 우선 (Branded > Survey)
  */
-function selectBestMatch(results: NutritionData[], foodName: string): NutritionData {
+function selectBestMatch(
+  results: NutritionData[],
+  foodName: string,
+  options?: { excludeFrozen?: boolean }
+): NutritionData {
   if (results.length === 1) return results[0];
 
   const nameLower = foodName.toLowerCase();
+
+  // 냉동식품 브랜드 목록
+  const frozenBrands = [
+    'michelina',
+    'lean cuisine',
+    'stouffer',
+    'healthy choice',
+    'marie callender',
+    'banquet',
+    'hungry man',
+    'smart ones',
+    'boston market',
+    'devour',
+  ];
 
   // 점수 기반 선택
   const scored = results.map((item) => {
     let score = 0;
 
+    // 0. 냉동식품 제외 (옵션)
+    if (options?.excludeFrozen && item.brand) {
+      const brandLower = item.brand.toLowerCase();
+      if (frozenBrands.some((frozen) => brandLower.includes(frozen))) {
+        console.log(`[Matching] Excluding frozen brand: ${item.brand}`);
+        score -= 200; // 냉동식품 강력 제외
+      }
+    }
+
     // 1. 브랜드 있는 음식 우선 (+30점)
     if (item.brand) {
       score += 30;
 
-      // 유명 브랜드 추가 점수 (+20점)
-      const famousBrands = ['mcdonald', 'burger king', 'subway', 'wendy', 'taco bell', 'kfc'];
+      // 유명 레스토랑 브랜드 추가 점수 (+20점)
+      const famousBrands = ['mcdonald', 'burger king', 'subway', 'wendy', 'taco bell', 'kfc', 'chipotle'];
       if (famousBrands.some((brand) => item.brand?.toLowerCase().includes(brand))) {
         score += 20;
       }

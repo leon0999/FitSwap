@@ -127,6 +127,45 @@ function normalizeIngredient(ingredient: string): string {
 }
 
 /**
+ * USDA 검색 쿼리 준비 (조리된 상태로 검색)
+ *
+ * "pasta" → "pasta cooked"
+ * "rice" → "rice cooked"
+ * "tomato sauce" → "tomato sauce" (그대로)
+ */
+function prepareIngredientSearchQuery(ingredient: string): string {
+  const ingredientLower = ingredient.toLowerCase();
+
+  // 조리가 필요한 재료들
+  const needsCookedKeyword = [
+    'pasta',
+    'spaghetti',
+    'penne',
+    'fettuccine',
+    'noodles',
+    'rice',
+    'quinoa',
+    'lentils',
+    'beans',
+  ];
+
+  // 이미 "cooked" 포함되어 있으면 그대로
+  if (ingredientLower.includes('cooked')) {
+    return ingredient;
+  }
+
+  // 조리 필요한 재료인지 확인
+  for (const keyword of needsCookedKeyword) {
+    if (ingredientLower.includes(keyword)) {
+      return `${ingredient} cooked`;
+    }
+  }
+
+  // 나머지는 그대로 검색
+  return ingredient;
+}
+
+/**
  * 재료별 예상 무게 반환
  */
 function estimateIngredientWeight(ingredient: string): number {
@@ -166,8 +205,9 @@ export async function calculateCompositeNutrition(
         continue;
       }
 
-      // USDA 검색
-      const results = await searchFood(ingredient);
+      // USDA 검색 시 조리된 상태로 검색 (pasta, rice 등)
+      const searchQuery = prepareIngredientSearchQuery(ingredient);
+      const results = await searchFood(searchQuery);
 
       if (results.length === 0) {
         console.log(`[Composite] No data found for: ${ingredient}`);
@@ -320,4 +360,115 @@ export function isCompositeFoodCandidate(
 
   const nameLower = foodName.toLowerCase();
   return compositeKeywords.some(keyword => nameLower.includes(keyword));
+}
+
+/**
+ * 자동 재료 추정 (AI가 ingredients를 반환하지 않을 때)
+ *
+ * 음식명으로 일반적인 재료 구성 추정
+ */
+export function estimateIngredientsFromName(foodName: string): string[] | null {
+  const nameLower = foodName.toLowerCase();
+
+  // 파스타류
+  if (nameLower.includes('spaghetti') || nameLower.includes('pasta')) {
+    if (nameLower.includes('marinara')) {
+      return ['spaghetti pasta', 'marinara sauce', 'olive oil', 'basil'];
+    }
+    if (nameLower.includes('alfredo')) {
+      return ['fettuccine', 'alfredo sauce', 'parmesan cheese'];
+    }
+    if (nameLower.includes('carbonara')) {
+      return ['spaghetti pasta', 'cream', 'parmesan cheese', 'eggs'];
+    }
+    if (nameLower.includes('pesto')) {
+      return ['penne', 'pesto', 'parmesan cheese'];
+    }
+    // 기본 파스타 (토마토 + 바질)
+    if (nameLower.includes('tomato') || nameLower.includes('basil')) {
+      return ['spaghetti pasta', 'tomato sauce', 'olive oil', 'basil'];
+    }
+    return ['spaghetti pasta', 'tomato sauce', 'olive oil'];
+  }
+
+  // 샐러드류
+  if (nameLower.includes('salad')) {
+    if (nameLower.includes('caesar')) {
+      return ['lettuce', 'parmesan cheese', 'croutons', 'caesar dressing'];
+    }
+    if (nameLower.includes('greek')) {
+      return ['lettuce', 'tomato', 'cucumber', 'feta cheese', 'olive oil'];
+    }
+    return ['lettuce', 'tomato', 'cucumber', 'olive oil'];
+  }
+
+  // 밥류
+  if (nameLower.includes('rice') && nameLower.includes('bowl')) {
+    if (nameLower.includes('chicken')) {
+      return ['white rice', 'grilled chicken', 'vegetables'];
+    }
+    if (nameLower.includes('beef')) {
+      return ['white rice', 'beef', 'vegetables'];
+    }
+    return ['white rice', 'vegetables'];
+  }
+
+  // 볶음류
+  if (nameLower.includes('stir fry')) {
+    if (nameLower.includes('chicken')) {
+      return ['chicken breast', 'vegetables', 'soy sauce', 'rice'];
+    }
+    return ['vegetables', 'soy sauce', 'rice'];
+  }
+
+  // 추정 불가
+  return null;
+}
+
+/**
+ * 레스토랑/집밥 음식 감지 (브랜드 제외)
+ *
+ * USDA에서 냉동식품 브랜드가 선택되는 것을 방지
+ */
+export function isRestaurantOrHomemade(foodName: string): boolean {
+  const nameLower = foodName.toLowerCase();
+
+  // 확실한 브랜드 키워드 (이것들만 USDA 직접 검색)
+  const brandKeywords = [
+    'big mac',
+    'whopper',
+    'quarter pounder',
+    "mcdonald's",
+    'burger king',
+    'subway',
+    'kfc',
+    'taco bell',
+    'wendy\'s',
+    'chipotle',
+  ];
+
+  // 브랜드명이 명확하면 false (USDA 직접 검색)
+  if (brandKeywords.some(brand => nameLower.includes(brand))) {
+    return false;
+  }
+
+  // 레스토랑/집밥 키워드 (복합 음식으로 처리)
+  const homemadeKeywords = [
+    'pasta',
+    'spaghetti',
+    'salad',
+    'bowl',
+    'plate',
+    'homemade',
+    'with',
+    'and',
+    'marinara',
+    'alfredo',
+    'carbonara',
+    'pesto',
+    'stir fry',
+    'fried rice',
+  ];
+
+  return homemadeKeywords.some(keyword => nameLower.includes(keyword));
 }
