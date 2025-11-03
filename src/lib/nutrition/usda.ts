@@ -11,6 +11,12 @@
 
 import { getCached, setCached, CacheKeys, CacheTTL } from '@/lib/redis';
 import { calculateHealthScore } from '@/lib/utils';
+import {
+  calculateHealthScoreV2,
+  detectQualityAttributes,
+  type QualityAttributes,
+  type HealthScoreBreakdown,
+} from './health-score-v2';
 
 const USDA_API_URL = 'https://api.nal.usda.gov/fdc/v1';
 const USDA_API_KEY = process.env.USDA_API_KEY;
@@ -30,8 +36,12 @@ export interface NutritionData {
   sugar: number;
   sodium: number; // mg
 
-  // 건강 점수
+  // 건강 점수 v1 (backward compatibility)
   healthScore: number; // 0-100
+
+  // 건강 점수 v2 (NEW)
+  quality?: QualityAttributes;
+  healthScoreV2?: HealthScoreBreakdown;
 
   // 메타데이터
   dataType: string;
@@ -112,7 +122,7 @@ function parseUSDAFood(food: any): NutritionData | null {
     const sugar = nutrientMap[2000] || 0; // Sugars (g)
     const sodium = nutrientMap[1093] || 0; // Sodium (mg)
 
-    // 건강 점수 계산
+    // 건강 점수 v1 계산 (backward compatibility)
     const healthScore = calculateHealthScore({
       calories,
       protein,
@@ -121,6 +131,24 @@ function parseUSDAFood(food: any): NutritionData | null {
       fiber,
       sugar,
       sodium,
+    });
+
+    // 품질 속성 감지 (v2)
+    const quality = detectQualityAttributes(
+      food.description,
+      food.ingredients || food.brandName
+    );
+
+    // 건강 점수 v2 계산
+    const healthScoreV2 = calculateHealthScoreV2({
+      calories,
+      protein,
+      carbs,
+      fat,
+      fiber,
+      sugar,
+      sodium,
+      quality,
     });
 
     return {
@@ -135,7 +163,9 @@ function parseUSDAFood(food: any): NutritionData | null {
       fiber: Math.round(fiber * 10) / 10,
       sugar: Math.round(sugar * 10) / 10,
       sodium: Math.round(sodium),
-      healthScore,
+      healthScore, // v1 (backward compatibility)
+      quality,
+      healthScoreV2,
       dataType: food.dataType,
       cached: false,
     };

@@ -150,6 +150,79 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
                 </p>
               </div>
             </div>
+
+            {/* Health Score v2 */}
+            {(original?.healthScoreV2 || nutrition?.healthScoreV2) && (
+              <div className="mt-6 pt-6 border-t border-gray-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4">Health Score v2</h4>
+
+                {/* Score & Tier */}
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="flex-1 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-4 border border-green-200">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-5xl font-bold text-green-700">
+                        {original?.healthScoreV2?.total || nutrition?.healthScoreV2?.total}
+                      </span>
+                      <span className="text-2xl text-gray-500">/100</span>
+                    </div>
+                    <div className="mt-2">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${
+                          (original?.healthScoreV2?.tier || nutrition?.healthScoreV2?.tier) === 'Excellent'
+                            ? 'bg-green-600 text-white'
+                            : (original?.healthScoreV2?.tier || nutrition?.healthScoreV2?.tier) === 'Great'
+                            ? 'bg-green-500 text-white'
+                            : (original?.healthScoreV2?.tier || nutrition?.healthScoreV2?.tier) === 'Good'
+                            ? 'bg-yellow-500 text-white'
+                            : (original?.healthScoreV2?.tier || nutrition?.healthScoreV2?.tier) === 'Fair'
+                            ? 'bg-orange-500 text-white'
+                            : 'bg-red-500 text-white'
+                        }`}
+                      >
+                        {original?.healthScoreV2?.tier || nutrition?.healthScoreV2?.tier}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Score Breakdown */}
+                <div className="grid grid-cols-2 gap-3 mb-4">
+                  <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                    <p className="text-xs text-blue-600 font-medium mb-1">Nutrition Score</p>
+                    <p className="text-2xl font-bold text-blue-700">
+                      {original?.healthScoreV2?.nutritionScore || nutrition?.healthScoreV2?.nutritionScore}
+                      <span className="text-sm text-blue-500">/50</span>
+                    </p>
+                  </div>
+                  <div className="bg-purple-50 rounded-lg p-3 border border-purple-200">
+                    <p className="text-xs text-purple-600 font-medium mb-1">Quality Score</p>
+                    <p className="text-2xl font-bold text-purple-700">
+                      {original?.healthScoreV2?.qualityScore || nutrition?.healthScoreV2?.qualityScore}
+                      <span className="text-sm text-purple-500">/50</span>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Quality Badges */}
+                {(original?.healthScoreV2?.badges || nutrition?.healthScoreV2?.badges)?.length > 0 && (
+                  <div>
+                    <p className="text-sm font-medium text-gray-700 mb-2">Quality Attributes:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {(original?.healthScoreV2?.badges || nutrition?.healthScoreV2?.badges).map((badge: any, index: number) => (
+                        <div
+                          key={index}
+                          className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-${badge.color}-100 text-${badge.color}-700 border border-${badge.color}-300`}
+                          title={badge.description}
+                        >
+                          <span>{badge.emoji}</span>
+                          <span>{badge.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -216,6 +289,51 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
                     <p className="text-2xl font-bold text-gray-900">{alt.fat}<span className="text-sm text-gray-500">g</span></p>
                   </div>
                 </div>
+
+                  {/* Health Score v2 (Compact) */}
+                  {alt.healthScoreV2 && (
+                    <div className="mb-4 p-3 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg border border-green-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-baseline gap-2">
+                          <span className="text-3xl font-bold text-green-700">
+                            {alt.healthScoreV2.total}
+                          </span>
+                          <span className="text-sm text-gray-500">/100</span>
+                        </div>
+                        <span
+                          className={`px-2 py-1 rounded-full text-xs font-medium ${
+                            alt.healthScoreV2.tier === 'Excellent'
+                              ? 'bg-green-600 text-white'
+                              : alt.healthScoreV2.tier === 'Great'
+                              ? 'bg-green-500 text-white'
+                              : alt.healthScoreV2.tier === 'Good'
+                              ? 'bg-yellow-500 text-white'
+                              : alt.healthScoreV2.tier === 'Fair'
+                              ? 'bg-orange-500 text-white'
+                              : 'bg-red-500 text-white'
+                          }`}
+                        >
+                          {alt.healthScoreV2.tier}
+                        </span>
+                      </div>
+
+                      {/* Quality Badges (Compact) */}
+                      {alt.healthScoreV2.badges && alt.healthScoreV2.badges.length > 0 && (
+                        <div className="flex flex-wrap gap-1">
+                          {alt.healthScoreV2.badges.map((badge: any, badgeIdx: number) => (
+                            <span
+                              key={badgeIdx}
+                              className={`inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-xs font-medium bg-${badge.color}-100 text-${badge.color}-700 border border-${badge.color}-300`}
+                              title={badge.description}
+                            >
+                              {badge.emoji}
+                              <span className="text-xs">{badge.label}</span>
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
 
                   {/* 추천 이유 */}
                   <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">

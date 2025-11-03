@@ -12,6 +12,10 @@
 
 import { searchFood, NutritionData } from './usda';
 import { calculateHealthScore } from '@/lib/utils';
+import {
+  calculateHealthScoreV2,
+  detectQualityAttributes,
+} from './health-score-v2';
 
 /**
  * 재료별 예상 무게 (g)
@@ -249,8 +253,36 @@ export async function calculateCompositeNutrition(
     }
 
     // 4. 결과 생성
+    const compositeName = `${ingredients.join(' + ')} (Homemade)`;
+
+    // 품질 속성 감지 (재료명 기반)
+    const quality = detectQualityAttributes(compositeName);
+
+    // 건강 점수 v1
+    const healthScore = calculateHealthScore({
+      calories: totalCalories,
+      protein: totalProtein,
+      carbs: totalCarbs,
+      fat: totalFat,
+      fiber: totalFiber,
+      sugar: totalSugar,
+      sodium: totalSodium,
+    });
+
+    // 건강 점수 v2
+    const healthScoreV2 = calculateHealthScoreV2({
+      calories: totalCalories,
+      protein: totalProtein,
+      carbs: totalCarbs,
+      fat: totalFat,
+      fiber: totalFiber,
+      sugar: totalSugar,
+      sodium: totalSodium,
+      quality,
+    });
+
     const compositeNutrition: NutritionData = {
-      name: `${ingredients.join(' + ')} (Homemade)`,
+      name: compositeName,
       brand: undefined,
       fdcId: 0, // 복합 음식은 ID 없음
       servingSize: totalWeight || ingredientData.reduce((sum, item) => sum + item.weight, 0),
@@ -261,15 +293,9 @@ export async function calculateCompositeNutrition(
       fiber: Math.round(totalFiber * 10) / 10,
       sugar: Math.round(totalSugar * 10) / 10,
       sodium: Math.round(totalSodium),
-      healthScore: calculateHealthScore({
-        calories: totalCalories,
-        protein: totalProtein,
-        carbs: totalCarbs,
-        fat: totalFat,
-        fiber: totalFiber,
-        sugar: totalSugar,
-        sodium: totalSodium,
-      }),
+      healthScore, // v1 (backward compatibility)
+      quality,
+      healthScoreV2,
       dataType: 'Composite',
       cached: false,
     };
