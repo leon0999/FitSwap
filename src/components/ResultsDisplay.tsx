@@ -6,6 +6,13 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import {
+  generateAllDeliveryLinks,
+  getRecommendedServices,
+  trackDeliveryLinkClick,
+  DELIVERY_SERVICES,
+  type DeliveryService,
+} from '@/lib/delivery/deep-links';
 
 interface ResultsDisplayProps {
   result: {
@@ -340,17 +347,53 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
                     <p className="text-sm text-green-800 font-medium">{alt.reason}</p>
                   </div>
 
-                  {/* Find Near Me 버튼 */}
-                  <button
-                    onClick={() => handleFindNearMe(alt)}
-                    className="w-full py-3 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-all flex items-center justify-center gap-2"
-                  >
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                    </svg>
-                    Find Near Me
-                  </button>
+                  {/* 배달 버튼들 */}
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {/* Order Now (Primary: Uber Eats) */}
+                    <a
+                      href={generateAllDeliveryLinks({ foodName: alt.name }).ubereats}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => trackDeliveryLinkClick('ubereats', alt.name)}
+                      className="py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-semibold hover:from-green-700 hover:to-emerald-700 transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="text-lg">🚗</span>
+                      <span>Order Now</span>
+                    </a>
+
+                    {/* Find Near Me (Secondary) */}
+                    <button
+                      onClick={() => handleFindNearMe(alt)}
+                      className="py-3 bg-white border-2 border-green-600 text-green-700 rounded-lg font-semibold hover:bg-green-50 transition-all flex items-center justify-center gap-2"
+                    >
+                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                      </svg>
+                      <span>Near Me</span>
+                    </button>
+                  </div>
+
+                  {/* 추가 배달 옵션 (작게) */}
+                  <div className="flex items-center justify-center gap-2">
+                    <span className="text-xs text-gray-500">Also on:</span>
+                    {(['doordash', 'grubhub', 'instacart'] as DeliveryService[]).map((service) => {
+                      const links = generateAllDeliveryLinks({ foodName: alt.name });
+                      const serviceInfo = DELIVERY_SERVICES[service];
+                      return (
+                        <a
+                          key={service}
+                          href={links[service]}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={() => trackDeliveryLinkClick(service, alt.name)}
+                          className="text-xl hover:scale-110 transition-transform"
+                          title={serviceInfo.name}
+                        >
+                          {serviceInfo.icon}
+                        </a>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             ))}
@@ -469,8 +512,48 @@ function MapModal({ food, onClose }: MapModalProps) {
           </div>
         </div>
 
+        {/* 배달 서비스 버튼 */}
+        <div className="px-6 py-4 bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-200">
+          <h4 className="text-sm font-semibold text-gray-900 mb-3">🚀 Order for Delivery</h4>
+          <div className="grid grid-cols-2 gap-3">
+            {getRecommendedServices(food.name).map((service: DeliveryService) => {
+              const serviceInfo = DELIVERY_SERVICES[service];
+              const links = generateAllDeliveryLinks({
+                foodName: food.name,
+                latitude: userLocation?.lat,
+                longitude: userLocation?.lng,
+              });
+
+              return (
+                <a
+                  key={service}
+                  href={links[service]}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => trackDeliveryLinkClick(service, food.name)}
+                  className={`flex items-center gap-2 px-4 py-3 bg-white border-2 border-${serviceInfo.color}-300 rounded-lg hover:border-${serviceInfo.color}-500 hover:bg-${serviceInfo.color}-50 transition-all group`}
+                >
+                  <span className="text-2xl">{serviceInfo.icon}</span>
+                  <div className="flex-1 text-left">
+                    <p className={`font-semibold text-${serviceInfo.color}-900 text-sm`}>
+                      {serviceInfo.name}
+                    </p>
+                    <p className="text-xs text-gray-600">{serviceInfo.description}</p>
+                  </div>
+                  <svg className="w-4 h-4 text-gray-400 group-hover:text-green-600 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                  </svg>
+                </a>
+              );
+            })}
+          </div>
+          <p className="text-xs text-gray-600 mt-3 text-center">
+            💰 Or find nearby restaurants below
+          </p>
+        </div>
+
         {/* 레스토랑 목록 */}
-        <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
+        <div className="p-6 overflow-y-auto max-h-[calc(80vh-240px)]">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12">
               <div className="w-12 h-12 border-4 border-green-500 border-t-transparent rounded-full animate-spin mb-4" />
