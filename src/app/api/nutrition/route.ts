@@ -27,8 +27,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { searchFood } from '@/lib/nutrition/usda';
 import { getErrorMessage } from '@/lib/utils';
+import { findRealFoodNutrition } from '@/lib/nutrition/real-food-database';
+import { calculateHealthScoreV2 } from '@/lib/nutrition/health-score-v2';
 
-export const runtime = 'edge';
+// Using Node runtime for file system access
+export const runtime = 'nodejs';
 export const maxDuration = 10;
 
 export async function POST(req: NextRequest) {
@@ -46,7 +49,58 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 2. USDA에서 검색
+    // 2. 실제 음식 데이터베이스 우선 검색 (1인분/단품 기준)
+    const realFood = findRealFoodNutrition(foodName);
+
+    if (realFood) {
+      // 실제 데이터베이스에서 찾음 → 정확한 1인분 영양정보 반환
+      const healthScore = calculateHealthScoreV2({
+        calories: realFood.calories,
+        protein: realFood.protein,
+        carbs: realFood.carbs,
+        fat: realFood.fat,
+        sugar: realFood.sugar,
+        fiber: realFood.fiber,
+        sodium: realFood.sodium,
+        isOrganic: realFood.isOrganic,
+        keywords: [realFood.name, realFood.brand || '', realFood.category],
+      });
+
+      const result = {
+        name: realFood.name,
+        brand: realFood.brand,
+        serving: realFood.serving,
+        servingWeight: realFood.servingWeight,
+        calories: realFood.calories,
+        protein: realFood.protein,
+        carbs: realFood.carbs,
+        fat: realFood.fat,
+        sugar: realFood.sugar,
+        fiber: realFood.fiber,
+        sodium: realFood.sodium,
+        healthScoreV2: healthScore,
+        source: realFood.source,
+        dataSource: 'real-food-database' as const,
+        cached: true,
+      };
+
+      const responseTime = Date.now() - startTime;
+      console.log(
+        `[API] /nutrition: ${foodName} → REAL FOOD DATABASE (${realFood.calories} kcal, ${responseTime}ms)`
+      );
+
+      return NextResponse.json({
+        results: [result],
+        cached: true,
+        responseTime,
+        dataSource: 'real-food-database',
+      });
+    }
+
+    // 3. USDA에서 검색 (fallback)
+    console.log(
+      `[API] /nutrition: ${foodName} → Fallback to USDA (not in real food database)`
+    );
     const results = await searchFood(foodName);
 
     if (results.length === 0) {
