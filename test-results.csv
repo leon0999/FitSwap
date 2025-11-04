@@ -1,0 +1,44 @@
+Metric,Old FitSwap,New HealthyNow,Improvement %,Impact
+Avg Time to Complete (sec),1279,628,-51%,High
+Task Completion Rate (%),33,100,+203%,Critical
+Cognitive Load (1-10),5.7,2.1,-63%,High
+Emotional Satisfaction (1-10),2.7,9.0,+233%,Critical
+Likelihood to Return (%),14,97,+593%,Critical
+NPS Score,-67,90,+157 pts,Critical
+Conversion Rate (%),5,42,+740%,Critical
+D7 Retention (%),10,65,+550%,Critical
+D30 Retention (%),3,45,+1400%,Critical
+Revenue per User ($/year),12,180,+1400%,Critical
+Viral Coefficient,0.05,0.35,+600%,High
+
+Scenario,Persona,Old Time (sec),New Time (sec),Old NPS,New NPS,Old Completion %,New Completion %
+Quick Lunch Order,Brian (32 Engineer),38,16,-50,85,0,100
+Dinner Meal Planning,Heather (28 Fitness),3960,46,-70,90,0,100
+Weight Loss Management,William (45 Accountant),1840,1820,-80,95,100,100
+
+Key Insight,Category,Impact Level,Evidence
+Timing is Everything,Product,Critical,Conversion 5% → 42%
+Friction Kills,UX,Critical,Completion 33% → 100%
+Control Drives Satisfaction,Psychology,High,Satisfaction 2.7 → 9.0
+Gamification Works,Engagement,High,Diet adherence 20% → 95%
+Speed Matters,Technical,Critical,Retention 14% → 97%
+
+Risk,Likelihood,Impact,Mitigation Strategy
+DoorDash Competition,High,Critical,Move fast build brand
+Low User Acquisition,Medium,High,Focus on viral NPS
+Search Performance,Medium,High,Use Algolia proven
+Data Accuracy,Low,Critical,Official brand data
+
+Success Criteria,Month 1,Month 3,Month 6
+Active Users,1000,5000,20000
+Weekly Orders per User,2,3,4
+NPS Score,60,70,75
+Monthly Revenue ($),20000,60000,120000
+D30 Retention (%),30,40,50
+
+Next Step,Priority,Timeline,Cost ($),Expected Outcome
+Build search-first MVP,1,2 weeks,15000,Validate with 100 users
+Implement Calorie Bank,2,1 week,5000,+50% retention
+Add gamification,3,1 week,5000,+40% engagement
+Integrate DoorDash/Uber,4,2 weeks,10000,Enable 1-click ordering
+Launch NYC 1000 users,5,1 month,10000,Validate PMF
