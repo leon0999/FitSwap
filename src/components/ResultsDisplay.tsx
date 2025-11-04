@@ -349,9 +349,9 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
 
                   {/* 배달 버튼들 */}
                   <div className="grid grid-cols-2 gap-2 mb-3">
-                    {/* Order Now (Primary: Uber Eats) */}
+                    {/* Order Now (Primary) - Use orderUrl from database if available */}
                     <a
-                      href={generateAllDeliveryLinks({ foodName: alt.name }).ubereats}
+                      href={alt.orderUrl || generateAllDeliveryLinks({ foodName: alt.name }).ubereats}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={() => trackDeliveryLinkClick('ubereats', alt.name)}
@@ -373,27 +373,38 @@ export function ResultsDisplay({ result, onReset }: ResultsDisplayProps) {
                     </button>
                   </div>
 
-                  {/* 추가 배달 옵션 (작게) */}
-                  <div className="flex items-center justify-center gap-2">
-                    <span className="text-xs text-gray-500">Also on:</span>
-                    {(['doordash', 'grubhub', 'instacart'] as DeliveryService[]).map((service) => {
-                      const links = generateAllDeliveryLinks({ foodName: alt.name });
-                      const serviceInfo = DELIVERY_SERVICES[service];
-                      return (
-                        <a
-                          key={service}
-                          href={links[service]}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={() => trackDeliveryLinkClick(service, alt.name)}
-                          className="text-xl hover:scale-110 transition-transform"
-                          title={serviceInfo.name}
-                        >
-                          {serviceInfo.icon}
-                        </a>
-                      );
-                    })}
-                  </div>
+                  {/* Additional info - show brand if available */}
+                  {alt.orderUrl && (
+                    <div className="text-center mb-2">
+                      <p className="text-xs text-green-600 font-medium">
+                        ✓ Direct link to restaurant
+                      </p>
+                    </div>
+                  )}
+
+                  {/* 추가 배달 옵션 (작게) - Only show if no direct orderUrl */}
+                  {!alt.orderUrl && (
+                    <div className="flex items-center justify-center gap-2">
+                      <span className="text-xs text-gray-500">Also on:</span>
+                      {(['doordash', 'grubhub', 'instacart'] as DeliveryService[]).map((service) => {
+                        const links = generateAllDeliveryLinks({ foodName: alt.name });
+                        const serviceInfo = DELIVERY_SERVICES[service];
+                        return (
+                          <a
+                            key={service}
+                            href={links[service]}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={() => trackDeliveryLinkClick(service, alt.name)}
+                            className="text-xl hover:scale-110 transition-transform"
+                            title={serviceInfo.name}
+                          >
+                            {serviceInfo.icon}
+                          </a>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}

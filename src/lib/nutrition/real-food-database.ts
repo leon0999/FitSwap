@@ -43,6 +43,7 @@ export const REAL_FOOD_DATABASE: RealFoodNutrition[] = [
     sodium: 1010,
     source: 'McDonald\'s Official Nutrition',
     category: 'burger',
+    orderUrl: 'https://www.ubereats.com/store/mcdonalds',
   },
   {
     name: 'Whopper',
@@ -58,6 +59,7 @@ export const REAL_FOOD_DATABASE: RealFoodNutrition[] = [
     sodium: 980,
     source: 'Burger King Official Nutrition',
     category: 'burger',
+    orderUrl: 'https://www.ubereats.com/store/burger-king',
   },
   {
     name: 'Quarter Pounder with Cheese',
@@ -73,6 +75,7 @@ export const REAL_FOOD_DATABASE: RealFoodNutrition[] = [
     sodium: 1110,
     source: 'McDonald\'s Official Nutrition',
     category: 'burger',
+    orderUrl: 'https://www.ubereats.com/store/mcdonalds',
   },
   {
     name: 'Cheeseburger',
