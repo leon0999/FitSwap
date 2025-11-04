@@ -73,6 +73,10 @@ export async function POST(req: NextRequest) {
           sugar: realFood.sugar,
           fiber: realFood.fiber,
           sodium: realFood.sodium,
+          category: realFood.category,
+          isOrganic: realFood.isOrganic,
+          isHealthy: realFood.isHealthy,
+          orderUrl: realFood.orderUrl,
           healthScoreV2: calculateHealthScoreV2({
             calories: realFood.calories,
             protein: realFood.protein,
@@ -119,6 +123,7 @@ export async function POST(req: NextRequest) {
             category: alt.category,
             isOrganic: alt.isOrganic,
             isHealthy: alt.isHealthy,
+            orderUrl: alt.orderUrl,
             dataSource: 'real-food-database' as const,
           };
         }),

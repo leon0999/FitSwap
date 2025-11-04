@@ -80,6 +80,10 @@ export async function POST(req: NextRequest) {
         sodium: realFood.sodium,
         healthScoreV2: healthScore,
         source: realFood.source,
+        category: realFood.category,
+        isOrganic: realFood.isOrganic,
+        isHealthy: realFood.isHealthy,
+        orderUrl: realFood.orderUrl,
         dataSource: 'real-food-database' as const,
         cached: true,
       };
