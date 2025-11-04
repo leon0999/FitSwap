@@ -43,6 +43,12 @@ export interface EnhancedNutritionData {
 
   // Quality attributes (v2)
   quality?: QualityAttributes;
+
+  // Additional attributes (for real food database compatibility)
+  isOrganic?: boolean;
+  isHealthy?: boolean;
+  orderUrl?: string;
+  keywords?: string[];
 }
 
 /**
